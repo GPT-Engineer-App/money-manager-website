@@ -1,6 +1,9 @@
 import React, { useState } from "react";
-import { Box, Heading, Text, Input, Button, Stack, Select, Table, Thead, Tbody, Tr, Th, Td, Flex, Spacer } from "@chakra-ui/react";
+import { Box, Heading, Text, Button, Stack, Select, Table, Thead, Tbody, Tr, Th, Td, Flex, Spacer, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalCloseButton, ModalBody } from "@chakra-ui/react";
 import { FaPlus, FaSearch } from "react-icons/fa";
+import BudgetInput from "../components/BudgetInput";
+import TransactionInput from "../components/TransactionInput";
+import CategoryGraph from "../components/CategoryGraph";
 
 const Index = () => {
   const [balance, setBalance] = useState(0);
@@ -9,22 +12,21 @@ const Index = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
 
-  const handleAddTransaction = () => {
-    const name = prompt("Enter transaction name:");
-    const amount = Number(prompt("Enter transaction amount:"));
-    const category = prompt("Enter transaction category:");
-    const type = amount > 0 ? "income" : "expense";
+  const { isOpen: isBudgetOpen, onOpen: onBudgetOpen, onClose: onBudgetClose } = useDisclosure();
+  const { isOpen: isTransactionOpen, onOpen: onTransactionOpen, onClose: onTransactionClose } = useDisclosure();
 
+  const handleAddTransaction = (transaction) => {
     const newTransaction = {
       id: transactions.length + 1,
-      name,
-      amount,
-      category,
-      type,
+      ...transaction,
     };
 
     setTransactions([...transactions, newTransaction]);
-    setBalance(balance + amount);
+    setBalance(balance + transaction.amount);
+  };
+
+  const handleSetBudget = (newBudget) => {
+    setBudget(newBudget);
   };
 
   const filteredTransactions = transactions.filter((transaction) => transaction.name.toLowerCase().includes(searchTerm.toLowerCase()) && (filterCategory === "" || transaction.category === filterCategory));
@@ -41,21 +43,24 @@ const Index = () => {
 
       <Stack spacing={4} mb={8}>
         <Text fontSize="xl">
-          Balance: <strong>{balance}</strong>
+          Balance: <strong>{balance.toLocaleString("en-US", { style: "currency", currency: "USD" })}</strong>
         </Text>
         <Text fontSize="xl">
-          Budget: <Input value={budget} onChange={(e) => setBudget(Number(e.target.value))} type="number" placeholder="Enter budget" />
+          Budget:{" "}
+          <strong onClick={onBudgetOpen} cursor="pointer">
+            {budget.toLocaleString("en-US", { style: "currency", currency: "USD" })}
+          </strong>
         </Text>
-        <Text fontSize="xl">
-          Total Income: <strong>{totalIncome}</strong>
+        <Text fontSize="xl" color="green.500">
+          Total Income: <strong>{totalIncome.toLocaleString("en-US", { style: "currency", currency: "USD" })}</strong>
         </Text>
-        <Text fontSize="xl">
-          Total Expense: <strong>{totalExpense}</strong>
+        <Text fontSize="xl" color="red.500">
+          Total Expense: <strong>{totalExpense.toLocaleString("en-US", { style: "currency", currency: "USD" })}</strong>
         </Text>
       </Stack>
 
       <Flex mb={4}>
-        <Input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search transactions" mr={2} />
+        <Select icon={<FaSearch />} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search transactions" mr={2} />
         <Select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} placeholder="Filter by category" mr={2}>
           <option value="">All</option>
           {[...new Set(transactions.map((t) => t.category))].map((category) => (
@@ -65,7 +70,7 @@ const Index = () => {
           ))}
         </Select>
         <Spacer />
-        <Button leftIcon={<FaPlus />} onClick={handleAddTransaction}>
+        <Button leftIcon={<FaPlus />} onClick={onTransactionOpen}>
           Add Transaction
         </Button>
       </Flex>
@@ -82,12 +87,36 @@ const Index = () => {
           {filteredTransactions.map((transaction) => (
             <Tr key={transaction.id}>
               <Td>{transaction.name}</Td>
-              <Td color={transaction.type === "income" ? "green.500" : "red.500"}>{transaction.amount}</Td>
+              <Td color={transaction.type === "income" ? "green.500" : "red.500"}>{transaction.amount.toLocaleString("en-US", { style: "currency", currency: "USD" })}</Td>
               <Td>{transaction.category}</Td>
             </Tr>
           ))}
         </Tbody>
       </Table>
+
+      <CategoryGraph transactions={transactions} />
+
+      <Modal isOpen={isBudgetOpen} onClose={onBudgetClose}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Enter Budget</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <BudgetInput onSubmit={handleSetBudget} onClose={onBudgetClose} />
+          </ModalBody>
+        </ModalContent>
+      </Modal>
+
+      <Modal isOpen={isTransactionOpen} onClose={onTransactionClose}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Add Transaction</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <TransactionInput onSubmit={handleAddTransaction} onClose={onTransactionClose} />
+          </ModalBody>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 };
